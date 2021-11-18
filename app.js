@@ -1,3 +1,4 @@
+
 const axios = require('axios');
 const _ = require('lodash');
 const moment = require('moment');
@@ -21,7 +22,7 @@ function formatAndSendTweet(event) {
     const formattedEthPrice = formattedUnits * tokenEthPrice;
     const formattedUsdPrice = formattedUnits * tokenUsdPrice;
 
-    const tweetText = `${assetName} was purchased for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) ${openseaLink}`;
+    const tweetText = `${assetName} was purchased for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #pixelfoxes ${openseaLink}`;
 
     console.log(tweetText);
 
@@ -38,42 +39,39 @@ function formatAndSendTweet(event) {
     return tweet.tweet(tweetText);
 }
 
-const getParams = (slug, lastSaleTime) => ({
-    collection_slug: slug,
-    event_type: 'successful',
-    occurred_after: lastSaleTime,
-    only_opensea: 'false'
-});
-
-const getSortedEvents = (response) => {
-    const events = _.get(response, ['data', 'asset_events']);
-
-    return _.sortBy(events, function(event) {
-        const created = _.get(event, 'created_date');
-
-        return new Date(created);
-    });
-};
-
 // Poll OpenSea every 60 seconds & retrieve all sales for a given collection in either the time since the last sale OR in the last minute
-setInterval(async () => {
+setInterval(() => {
     const lastSaleTime = cache.get('lastSaleTime', null) || moment().startOf('minute').subtract(59, "seconds").unix();
 
     console.log(`Last sale (in seconds since Unix epoch): ${cache.get('lastSaleTime', null)}`);
 
-    const foxResponse = await axios.get('https://api.opensea.io/api/v1/events', { params: getParams(process.env.OPENSEA_COLLECTION_SLUG, lastSaleTime) })
-    const spookyFoxResponse = await axios.get('https://api.opensea.io/api/v1/events', { params: getParams(process.env.SPOOKY_FOX_COLLECTION_SLUG, lastSaleTime) })
+    axios.get('https://api.opensea.io/api/v1/events', {
+        params: {
+            collection_slug: process.env.OPENSEA_COLLECTION_SLUG,
+            event_type: 'successful',
+            occurred_after: lastSaleTime,
+            only_opensea: 'false'
+        }
+    }).then((response) => {
+        const events = _.get(response, ['data', 'asset_events']);
 
-    const allsortedEvents = [
-        ...getSortedEvents(foxResponse),
-        ...getSortedEvents(spookyFoxResponse)
-    ];
+        const sortedEvents = _.sortBy(events, function(event) {
+            const created = _.get(event, 'created_date');
 
-    _.each(allsortedEvents, (event) => {
-        const created = _.get(event, 'created_date');
+            return new Date(created);
+        })
 
-        cache.set('lastSaleTime', moment(created).unix());
+        console.log(`${events.length} sales since the last one...`);
 
-        return formatAndSendTweet(event);
+        _.each(sortedEvents, (event) => {
+            const created = _.get(event, 'created_date');
+
+            cache.set('lastSaleTime', moment(created).unix());
+
+            return formatAndSendTweet(event);
+        });
+    }).catch((error) => {
+        console.error(error);
     });
 }, 60000);
+© 2021 GitHub, Inc.
