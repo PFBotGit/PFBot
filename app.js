@@ -1,4 +1,3 @@
-
 const axios = require('axios');
 const _ = require('lodash');
 const moment = require('moment');
@@ -22,7 +21,7 @@ function formatAndSendTweet(event) {
     const formattedEthPrice = formattedUnits * tokenEthPrice;
     const formattedUsdPrice = formattedUnits * tokenUsdPrice;
 
-    const tweetText = `${assetName} was purchased for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #pixelfoxes ${openseaLink}`;
+    const tweetText = `${assetName} was purchase for ${formattedEthPrice}${ethers.constants.EtherSymbol} ($${Number(formattedUsdPrice).toFixed(2)}) #pixelfoxes ${openseaLink}`;
 
     console.log(tweetText);
 
@@ -46,6 +45,9 @@ setInterval(() => {
     console.log(`Last sale (in seconds since Unix epoch): ${cache.get('lastSaleTime', null)}`);
 
     axios.get('https://api.opensea.io/api/v1/events', {
+        headers: {
+            'X-API-KEY': process.env.X_API_KEY
+        },
         params: {
             collection_slug: process.env.OPENSEA_COLLECTION_SLUG,
             event_type: 'successful',
@@ -74,4 +76,3 @@ setInterval(() => {
         console.error(error);
     });
 }, 60000);
-© 2021 GitHub, Inc.
